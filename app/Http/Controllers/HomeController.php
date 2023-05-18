@@ -38,9 +38,9 @@ class HomeController extends Controller
 
     $exist_folder1 = DB::table('folder1')->where('name', $data['name'])->where('user_id', $data['user_id'])->where('status',1)->first();
     $exist_folder2 = DB::table('folder2')->where('name', $data['twoname'])->where('user_id', $data['user_id'])->where('status',1)->first();
-    
+    /*folder1に、入力した値と同じ値があればエラー*/
     if( empty($exist_folder1->id) ){
-    
+    /*folder2に、入力した値があればその値を指し、なければ新しくレコードを追加する*/
       if( empty($exist_folder2->id) ){
             
       DB::table('folder1')->insert([
@@ -56,11 +56,7 @@ class HomeController extends Controller
         'status'=>1
       ]);
 
-      DB::table('memos')->insert([
-        'content'=>$data['content'],
-        'user_id'=>$data['user_id'],
-        'status'=>1
-        ]);
+      
       
         }else{
         $two_name=$exist_folder2->name;
@@ -70,18 +66,18 @@ class HomeController extends Controller
         'status'=>1,
         'two_name'=>$two_name
       ]);
-       DB::table('memos')->insert([
-        'content'=>$data['content'],
-        'user_id'=>$data['user_id'],
-        'status'=>1
-        ]);
+       
 
        }
        }
        else{
            exit(1);
        }
-
+       DB::table('memos')->insert([
+        'content'=>$data['content'],
+        'user_id'=>$data['user_id'],
+        'status'=>1
+        ]);
 
       return redirect()->route('home');
 
@@ -91,20 +87,19 @@ class HomeController extends Controller
    {
     $user = \Auth::user();
     $folder1=DB::table('folder1')->where('id',$data)->where('user_id', $user['id'])->where('status',1)->get();
+    /*クリックしたfolder2の値と紐づいているフォルダ1の値をフォルダ1欄に表示*/
     if($folder1->count()===0){
-    $folder2=DB::table('folder2')->where('user_id', $user['id'])->where('status',1)->get();
     $folder1=DB::table('folder1')->where('user_id', $user['id'])->where('status',1)->where('two_name',$data)->get();
     $memos=DB::table('memos')->where('id',$folder1[0]->id)->where('user_id',$user['id'])->where('status',1)->first();
-    }else{
+    }
+    /*クリックしたfolder1のidの値と同じidのメモ内容を表示*/
+    else{
     
-    $folder2=DB::table('folder2')->where('user_id', $user['id'])->where('status',1)->get();
+    
     $memos=DB::table('memos')->where('id',$data)->where('user_id',$user['id'])->where('status',1)->first();
     }
     
-   
-
-
-
+    $folder2=DB::table('folder2')->where('user_id', $user['id'])->where('status',1)->get();
 
 
    return view('edit',compact('user','memos','folder2','folder1'));
@@ -117,57 +112,65 @@ class HomeController extends Controller
         $folder1id = DB::table('folder1')->where('id',$id)->where('user_id',$user['id'])->where('status',1)->first();
         $exist_folder2 = DB::table('folder2')->where('name',$inputs['twoname'])->where('user_id',$user['id'])->where('status',1)->get();
         $exist_folder1 = DB::table('folder1')->where('name',$inputs['name'])->where('user_id',$user['id'])->where('status',1)->get();
+       /*更新したfolder1の値が更新前と同じ場合*/
         if($folder1id->name==$inputs['name']){
+        /*更新したfolder2の値と同じ値のレコードが既にある場合*/
           if($exist_folder2->count()===1){
           DB::table('folder2')->where('name',$inputs['twoname'])->update(['name'=>$inputs['twoname']]);
-          DB::table('folder1')->where('id',$id)->update(['name'=>$inputs['name']],['two_name'=>$inputs['twoname']]);
-          DB::table('memos')->where('id', $id)->update(['content' => $inputs['content'] ]);
+          
           }
-        
+        /*更新したfolder2の値と同じ値のレコードがない場合*/
           else{
           DB::table('folder2')->insert([
         'name'=>$inputs['twoname'],
         'user_id'=>$user['id'],
         'status'=>1
          ]);
-          DB::table('folder1')->where('id',$id)->update(['name'=>$inputs['name']],['two_name'=>$inputs['twoname']]);
-          DB::table('memos')->where('id', $id)->update(['content' => $inputs['content'] ]);
+          
           }
           }
+        /*更新したfolder1の値と同じ値のレコードが他にない場合*/
         elseif($exist_folder1->count()===0){
+        /*更新したfolder2の値と同じ値のレコードが既にある場合*/
           if($exist_folder2->count()===1){
           DB::table('folder2')->where('name',$inputs['twoname'])->update(['name'=>$inputs['twoname']]);
-          DB::table('folder1')->where('id',$id)->update(['name'=>$inputs['name']],['two_name'=>$inputs['twoname']]);
-          DB::table('memos')->where('id', $id)->update(['content' => $inputs['content'] ]);
+          
           }
+        /*更新したfolder2の値と同じ値のレコードがない場合*/
           else{
           DB::table('folder2')->insert([
         'name'=>$inputs['twoname'],
         'user_id'=>$user['id'],
         'status'=>1
          ]);
-          DB::table('folder1')->where('id',$id)->update(['name'=>$inputs['name']],['two_name'=>$inputs['twoname']]);
-          DB::table('memos')->where('id', $id)->update(['content' => $inputs['content'] ]);
 
           }
+          /*更新したfolder1の値が既に他のレコードにある場合、エラー*/
        }else{
           exit (redirect()->route('home'));
       }
       /*tablememosとtablefolder1はくくりだしてよいのでは*/
+      DB::table('folder1')->where('id',$id)->update(['name'=>$inputs['name']],['two_name'=>$inputs['twoname']]);
+          DB::table('memos')->where('id', $id)->update(['content' => $inputs['content'] ]);
         return redirect()->route('home');
     }
 
     public function delete(Request $request, $id){
+    $user = \Auth::user();
     $folder1id = DB::table('folder1')->where('id',$id)->where('user_id',$user['id'])->where('status',1)->first();
     $exist_folder2 = DB::table('folder2')->where('name',$folder1id->two_name);
+    /*folder2が削除するfolder1しか指していない場合*/
     if($exist_folder2->count()===1){
           DB::table('folder2')->where('name',$folder1id->two_name)->update([ 'status' => 2 ]);
           DB::table('folder1')->where('id',$id)->update([ 'status' => 2 ]);
           DB::table('memos')->where('id',$id)->update([ 'status' => 2 ]);
+    /*folder2が削除するfolder1以外も指している場合*/
           }else{
           DB::table('folder1')->where('id',$id)->update([ 'status' => 2 ]);
           DB::table('memos')->where('id',$id)->update([ 'status' => 2 ]);
           }
+
+          return redirect()->route('home')->with('success','メモを削除しました');
     }
 
     
