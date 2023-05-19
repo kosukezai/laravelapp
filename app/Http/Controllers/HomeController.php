@@ -71,7 +71,7 @@ class HomeController extends Controller
        }
        }
        else{
-           exit(1);
+           exit(redirect()->route('home'));
        }
        DB::table('memos')->insert([
         'content'=>$data['content'],
